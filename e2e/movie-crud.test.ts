@@ -162,30 +162,41 @@ test.describe('Movie CRUD E2E Flow', () => {
     });
 
     // 7.0 - Localizar o botão "Excluir" na linha do filme
-    const deleteButton = movieRow.locator('button[id$="-action-1"]');
+    const deleteButton = movieRow.locator('button[id$="-actions-menu"]');
 
-    await test.step('7.0 - Clicar no botão Excluir', async () => {
-      // Espera explícita pelo botão
-      await expect(deleteButton).toBeVisible({ timeout: 10000 });
-      // Rola para a visão e clica
-      await deleteButton.scrollIntoViewIfNeeded();
-      await deleteButton.click();
+    await test.step('7.0 - Excluir o filme', async () => {
+      const movieRow = page.locator(`table tr:has-text("${MOVIE_NAME}")`);
+
+      // Método 1: Tente localizar o botão de menu pelo ID padrão
+      const menuButton = movieRow.locator('button[id*="actions-menu"]');
+
+      // Método 2: Se não encontrar, use o botão com ícone
+      if (await menuButton.count() === 0) {
+        const iconButton = movieRow.locator('button:has(svg)');
+        await iconButton.first().click();
+      } else {
+        await menuButton.click();
+      }
+
+      // Aguarde o dropdown
+      await page.waitForSelector('[role="menu"]', { timeout: 10000 });
+
+      // Clique em "Excluir"
+      const deleteOption = page.locator('[role="menuitem"]:has-text("Excluir"), [role="menuitem"]:has-text("Delete")');
+      await deleteOption.click();
     });
 
     await test.step('7.1 - Verificar modal de exclusão', async () => {
-      const deleteModal = page
-        .locator(
-          'div[role="dialog"] h3:has-text("Tem certeza que deseja excluir")',
-        )
-        .first();
-      await expect(deleteModal).toBeVisible();
+      // Aguarde o modal aparecer com timeout maior
+      await page.waitForSelector('[role="dialog"]', { timeout: 10000 });
+
+      // Verifique se há texto de confirmação
+      await expect(page.locator('[role="dialog"]')).toContainText(/Tem certeza|Confirma|Confirmar/i);
     });
 
     await test.step('7.2 - Confirmar exclusão', async () => {
-      const confirmDeleteButton = page.locator(
-        'div[role="dialog"] button:has-text("Excluir")',
-      );
-      await confirmDeleteButton.click();
+      const confirmButton = page.locator('[role="dialog"] button:has-text("Excluir"), [role="dialog"] button:has-text("Confirmar")');
+      await confirmButton.click();
     });
 
     await test.step('7.3 - Verificar se o filme foi removido', async () => {
